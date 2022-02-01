@@ -1,3 +1,5 @@
+// TODO: Import $http from packages?
+
 var DigestFactory = function DigestFactory() {
 	var $digest = this;
 

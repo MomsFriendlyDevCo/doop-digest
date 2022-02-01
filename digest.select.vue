@@ -1,4 +1,6 @@
 <script lang="js" frontend>
+// TODO: Import $emit, $http, $prompt from packages?
+
 /**
 * Wrapper around digest which supports lazy loading any entity based on an API endpoint
 * @param {string} url The URL endpoint to retrieve data from

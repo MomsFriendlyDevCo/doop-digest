@@ -1,4 +1,6 @@
 <script lang="js" frontend>
+// TODO: Import $emit, $toast from packages?
+
 /**
 * Extremely simple component which fetches a single point of data from the server and displays it
 * EITHER the collection + ID OR the url must be specified
