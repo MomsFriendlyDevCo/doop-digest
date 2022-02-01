@@ -1,4 +1,4 @@
-@doop/service-{{FIXME}}
+@doop/digest
 ==================
 
-A {{FIXME}} service for the [Doop framework](https://github.com/MomsFriendlyDevCo/Doop).
+A digest service for the [Doop framework](https://github.com/MomsFriendlyDevCo/Doop).
