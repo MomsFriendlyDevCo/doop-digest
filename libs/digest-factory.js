@@ -1,7 +1,7 @@
 // TODO: Import $http from packages?
 
-var DigestFactory = function DigestFactory() {
-	var $digest = this;
+var DigestFactory = function DigestFactory(context) {
+	var $digest = {};
 
 	$digest.settings = {
 		expire: 1000 * 30, // Time in ms to consider a digest pull expired, default 30s
@@ -69,7 +69,7 @@ var DigestFactory = function DigestFactory() {
 		$digest.cache[settings.hash] = {
 			created: new Date(),
 			value: undefined,
-			promise: this.$http.get(url, {
+			promise: context.$http.get(url, {
 				...(settings.field ? {params: {select: settings.field}} : null)
 			})
 				.then(res => { // Pick the specific field value if requested, otherwise return full response
