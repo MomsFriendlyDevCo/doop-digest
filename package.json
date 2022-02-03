@@ -1,6 +1,6 @@
 {
   "name": "@doop/digest",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A digest service for the Doop framework",
   "main": "libs/digest-factory.js",
   "repository": {
@@ -16,6 +16,5 @@
     "url": "https://github.com/MomsFriendlyDevCo/doop-digest/issues"
   },
   "homepage": "https://github.com/MomsFriendlyDevCo/doop-digest#readme",
-  "dependencies": {
-  }
+  "dependencies": {}
 }
