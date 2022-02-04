@@ -16,5 +16,7 @@
     "url": "https://github.com/MomsFriendlyDevCo/doop-digest/issues"
   },
   "homepage": "https://github.com/MomsFriendlyDevCo/doop-digest#readme",
-  "dependencies": {}
+  "workspaces": [
+    "../*"
+  ]
 }
