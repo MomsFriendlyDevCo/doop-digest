@@ -15,8 +15,5 @@
   "bugs": {
     "url": "https://github.com/MomsFriendlyDevCo/doop-digest/issues"
   },
-  "homepage": "https://github.com/MomsFriendlyDevCo/doop-digest#readme",
-  "workspaces": [
-    "../*"
-  ]
+  "homepage": "https://github.com/MomsFriendlyDevCo/doop-digest#readme"
 }
