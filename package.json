@@ -1,6 +1,6 @@
 {
   "name": "@doop/digest",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A digest service for the Doop framework",
   "main": "libs/digest-factory.js",
   "repository": {
