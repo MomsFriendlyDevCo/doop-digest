@@ -30,11 +30,13 @@ var DigestFactory = function DigestFactory(context) {
 	* Lazily fetch a URL and hold it in a memory cache until it expires
 	* NOTE: Requesting an expired cache entry will automatically cause it to be re-fetched
 	* @param {string} [url] The URL to fetch, if not speicifed in the options object
-	* @param {string} [field] Optional field to restrict the response to, if omitted the entire raw response is set, use the special case "*" to return only the data portion (implies `{rawResponse: false}`)
+	* @param {string} [field] Optional dotted notation field to restrict the response to, if omitted the entire raw response is set, use the special case "*" to return only the data portion (implies `{rawResponse: false}`)
+* @param {boolean} [bulk=false] Fetch entire data object without specifying `?select=${field}` but pick the field specified only
 	* @param {object} [options] Additional options to pass
 	* @param {string} [options.url] Alternate method to specify the URL
 	* @param {string|undefined} [options.field] The field to retrieve or the special case "*" for everything
 	* @param {string} [options.hash] Hashing string to use when caching, automatically calculated from the URL + field if omitted
+	* @param {string} [options.hashMethod='field'] If the hash is unspecified how to uniquely identify this request, defaults to 'field' (URL + unqiue field asked for), can be any other component of a parsed URL
 	* @returns {Promise} A promise which will resolve with either the specificly requested field value or the Axios response for the request
 	*/
 	$digest.get = (url, field, options) => {
@@ -52,43 +54,72 @@ var DigestFactory = function DigestFactory(context) {
 			throw new Error(`Unknown call signature for $digest.get(${typeof url}, ${typeof field}, ${typeof options})`);
 		}
 		// }}}
+
 		var settings = {
 			url,
 			field: field === '*' ? undefined : field, // Either use the provided field name or set to undefined if the special case "*"
+			bulk: false,
 			hash: undefined, // Set below
+			hashMethod: 'field',
 			rawResponse: true,
 			...options,
 		};
-		settings.hash = settings.hash ? settings.hash : settings.field ? `${url}@${settings.field}` : url;
+		settings.hash = settings.hash ? settings.hash // If given a hash - use it
+			: settings.hashMethod == 'field' && settings.field ? `${url}@${settings.field}` // If we have a field - use URL + field as the hash
+			: settings.hashMethod ? (()=> {
+				let parsedUrl = new URL(url, window.location.href); // Compute URL from possibly partial URL component
+				if (!parsedUrl[settings.hashMethod]) throw new Error(`Unable to compute hash from non-existant URL subfield "${settings.hashMethod}"`);
+				return parsedUrl[settings.hashMethod];
+			})()
+			: url; // If we're fetching a full URL use the entire thing
 
 		if (
 			$digest.cache[settings.hash] // We already have a cache entry
 			&& !$digest.hasExpired($digest.cache[settings.hash].created) // ... and its still valid
-		) return $digest.cache[settings.hash].promise;
+		) {
+			if (settings.bulk) { // Bulk mode - need to extract the field we need
+				return $digest.cache[settings.hash].promise
+					.then(data => _.get($digest.cache[settings.hash].value, settings.field)) // Extract specific field from cache
+			} else {
+				return $digest.cache[settings.hash].promise;
+			}
+		}
 
 		$digest.cache[settings.hash] = {
 			created: new Date(),
 			value: undefined,
 			promise: context.$http.get(url, {
-				...(settings.field ? {params: {select: settings.field}} : null)
+				...(settings.field && !settings.bulk ? {params: {select: settings.field}} : null)
 			})
-				.then(res => { // Pick the specific field value if requested, otherwise return full response
-					if (!settings.field) return res.data; // No field specified - return entire data response
+				.then(({data}) => { // Pick the specific field value if requested, otherwise return full response
+					// All fields handling
+					if (!settings.field) return data; // No field specified - return entire data response
 
-					if (_.isArray(res.data)) throw new Error(`Expected a single object response rendering a <digest/> from URL "${url}" - got an array`);
-					if (!_.isObject(res.data)) throw new Error(`Expected a single object response rendering a <digest/> from URL "${url}" - got a non-object`);
-					if (_.isEmpty(res.data)) throw new Error(`Expected a single object response rendering a <digest/> from URL "${url}" - got empty object`);
+					// Empty data checks
+					if (_.isArray(data)) throw new Error(`Expected a single object response rendering a <digest/> from URL "${url}" - got an array`);
+					if (!_.isObject(data)) throw new Error(`Expected a single object response rendering a <digest/> from URL "${url}" - got a non-object`);
+					if (_.isEmpty(data)) throw new Error(`Expected a single object response rendering a <digest/> from URL "${url}" - got empty object`);
+
+					// Bulk mode
+					if (settings.bulk) {
+						if (!_.isObject(data) && !_.has(data, settings.fields)) throw new Error(`Got object return for <digest/> but field "${settings.field}" is not present`);
+						$digest.cache[settings.hash].value = data; // Set cache to ALL data
+						console.log('BULK CACHE', settings.field, 'AS', data[settings.field], 'from', data);
+						return _.get(data, settings.field); // ... but only return the field we are interested in
+					}
+
+					// CSV of fields
 					if (/,/.test(settings.field)) { // Given a CSV of fields - use the first one
 						var useField = settings.field.split(/\s*,\s*/, 2)[0];
-						if (!res.data[useField]) throw new Error(`Expected the field "${useField}" (as first field of CSV "${settings.field}") in single document response from URL "${url}". Got keys: ${Object.keys(res.data).join(', ')}`);
-						return res.data[useField];
-					} else { // Extract single key specified by settings.field
-						if (!_.has(res.data, settings.field)) throw new Error(`Expected the field "${settings.field}" in single document response from URL "${url}". Got keys: ${Object.keys(res.data).join(', ')}`);
-
-						return res.data[settings.field];
+						if (!_.has(data, useField)) throw new Error(`Expected the field "${useField}" (as first field of CSV "${settings.field}") in single document response from URL "${url}". Got keys: ${Object.keys(data).join(', ')}`);
+						return $digest.cache[settings.hash].value = _.get(data, useField); // Stash field + return
 					}
+
+					// Extract single key specified by settings.field
+					if (!_.has(data, settings.field)) throw new Error(`Expected the field "${settings.field}" in single document response from URL "${url}". Got keys: ${Object.keys(data).join(', ')}`);
+
+					return $digest.cache[settings.hash].value = _.get(data, settings.field);
 				})
-				.then(payload => $digest.cache[settings.hash].value = payload),
 		};
 
 		return $digest.cache[settings.hash].promise;

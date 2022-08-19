@@ -9,7 +9,8 @@
 * It is also possible to force this element to display values using the emitter events `digest.force.{class,icon,text,valid}`
 *
 * @param {string|Object} [url] The URL or AxiosRequest to fetch data (instead of specifying `collection` + `id`)
-* @param {string} [field="title"] Field to display the title of, if using slots specify "*" to populate `data` with the raw data object
+* @param {string} [field="title"] Dotted notation of the field to display the title of, if using slots specify "*" to populate `data` with the raw data object
+* @param {boolean} [bulk=false] Fetch entire data object without specifying `?select=${field}` but pick the field specified only
 * @param {function|string} [filter] Optional function filter or named Vue filter to run the result through before outputting
 * @param {string} [label] Use this label before fetching a remote one, if specifed the entity is treated as valid (including valid class and icon)
 * @param {boolean} [lazy=true] If true, fetching will be defered until the element is actually shown within the content area
@@ -22,7 +23,7 @@
 * @param {string} [iconValid] Optional icon to display next to the context when loaded
 * @param {string} [iconInvalid] Optional icon to display next to the `textInvalid` text when an error occurs
 * @param {boolean} [ignoreErrors=false] Ignore all thrown errors, if false they will be routed into this.$toast.catch
-* @param {string} [hashMethod='urlField'] How to cache the digest result, see the $digest service for more info
+* @param {string} [hashMethod='href'] How to cache the digest result, see the $digest service for more info
 *
 * @listens digest.force.class Recieved as `(newClass)` to force a specific class on a digest component
 * @listens digest.force.icon Recieved as `(newIconClass)` to force a specific icon class on a digest component
@@ -65,6 +66,7 @@ app.component('digest', {
 	props: {
 		url: {type: [Object, String], required: true},
 		field: {type: String, default: "title"},
+		bulk: {type: Boolean, default: false},
 		filter: {type: [Function, String]},
 		label: {type: String},
 		lazy: {type: Boolean, default: true},
@@ -77,7 +79,7 @@ app.component('digest', {
 		iconValid: {type: String},
 		iconInvalid: {type: String},
 		ignoreErrors: {type: Boolean, default: false},
-		hashMethod: {type: String, defualt: 'urlField', validator: v => ['urlField', 'url', 'urlQuery'].includes(v)},
+		hashMethod: {type: String, defualt: 'href', validator: v => ['href', 'pathname'].includes(v)},
 	},
 	methods: {
 		refresh() {
@@ -87,7 +89,10 @@ app.component('digest', {
 				this.displayIcon = this.$props.iconValid;
 				this.loading = false;
 			} else { // Fetch remote data
-				this.$digest.get(this.$props.url, this.$props.field, {hashMethod: this.$props.hashMethod})
+				this.$digest.get(this.$props.url, this.$props.field, {
+					bulk: this.$props.bulk,
+					hashMethod: this.$props.hashMethod,
+				})
 					.then(value => {
 						this.data = value;
 						this.displayContent = typeof this.$props.textValid == 'string' ? this.$props.textValid
